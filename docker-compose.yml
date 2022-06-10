@@ -1,0 +1,47 @@
+version: '3.9'
+
+services:
+  chatroom:
+    build: ./gochatroom/
+    image: gochatroom:v1
+    container_name: chatroom
+    restart: always
+    links:
+      - mysql
+      - redis
+    volumes:
+      - ./gochatroom/conf:/app/conf
+      - ./gochatroom/logs:/app/logs
+
+  mysql:
+    image: mariadb
+    container_name: mysql_chatroom
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: 12345
+      MYSQL_DATABASE: db_chatroom
+    volumes:
+      - ./mnt/mysql:/var/lib/mysql
+      - ./gochatroom/mysql/init:/docker-entrypoint-initdb.d/
+      - ./gochatroom/mysql/sql:/opt/sql
+
+  redis:
+    image: redis
+    container_name: redis_chatroom
+    restart: always
+    volumes:
+      - ./mnt/redis:/data/
+
+  web:
+    build: ./chatroom-front/
+    image: web_chatroom:v1
+    container_name: web_chatroom
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./gochatroom/nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./gochatroom/nginx/ssl:/etc/nginx/ssl
+    links:
+      - chatroom
+    command: [ 'nginx', '-g', 'daemon off;' ]
